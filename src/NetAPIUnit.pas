@@ -3,7 +3,7 @@ unit NetAPIUnit;
 interface
 
 uses
-  Windows, SysUtils, Winsock;
+  Windows, MySysutils, Winsock;
 
 type
   {ARP Addr行链表行}
@@ -71,26 +71,24 @@ type
 
 type
   {IP地址数组指针}
-  TaPInAddr = array[0..10] of PInAddr; //定义一个IN_ADDR类型的数组
-  PaPInAddr = ^TaPInAddr; //同上,用来得到本机的地址.
+  TaPInAddr = array[0..10] of PInAddr;  //定义一个IN_ADDR类型的数组
+  PaPInAddr = ^TaPInAddr;               //同上,用来得到本机的地址.
 
 procedure SetArpEntry(const InetAddr, EtherAddr: string); {如果MAC为空，它将自动查询}
 function GetMacAddr(const InetAddr: DWORD): string; {SendARP获取MAC地址}
 procedure WakeUpPro(const MacAddr: string);
-function HexToIp(Hex: string): string; //16进制IP转.分式IP
+function HexToIp(Hex: string): string;  //16进制IP转.分式IP
 function InetHexToInt(Hex: string): integer; //16进制IP转为网络顺序
-function GetHostStartID(HexIP: string): Cardinal;
 //function GetHostCount(ip, mask: string): Cardinal;//取得当前网络最大主机数
 function GetLocalIP: pchar;
 function GetLocalNetArea(IP: integer): string;
-function MakeID(ID: integer): string; //IP不足补全
-function GetSubStrEx(const Str, _Start, _End: string; var LastStr: string {余下部分}): string;
+function MakeID(ID: integer): string;   //IP不足补全
 implementation
 const
   MIB_IF_TYPE_ETHERNET = 6;
   MIB_IF_TYPE_TOKENRING = 9;
   MIB_IPNET_TYPE_STATIC = 4;
-  iphlpapilib = 'iphlpapi.dll';
+  iphlpapilib       = 'iphlpapi.dll';
 
 function SendARP(const DestIP, SrcIP: DWORD; pMacAddr: PULONG; var PhyAddrLen: ULONG): DWORD; stdcall; external iphlpapilib name 'SendARP';
 
@@ -108,20 +106,7 @@ type
   TPhysAddrByteArray = array[0..7] of Byte;
 
 
-function GetSubStrEx(const Str, _Start, _End: string; var LastStr: string {余下部分}): string;
-var
-  n: integer;
-begin
-  LastStr := copy(Str, pos(_Start, Str) + length(_Start), length(Str));
-  if _End = '' then
-    n := length(Str) + 1
-  else
-    n := pos(_End, LastStr);
-  Result := copy(LastStr, 1, n - 1);
-  LastStr := copy(LastStr, n + length(_End), length(LastStr));
-end;
-
-function HexToIp(Hex: string): string; //00 11 22 33 TO 192.168.0.1
+function HexToIp(Hex: string): string;  //00 11 22 33 TO 192.168.0.1
 begin
   Result := IntToStr(StrToInt('$' + copy(Hex, 7, 2)))
     + '.' + IntToStr(StrToInt('$' + copy(Hex, 5, 2)))
@@ -134,25 +119,20 @@ begin
   Result := StrToInt('$' + copy(Hex, 7, 2) + copy(Hex, 5, 2) + copy(Hex, 3, 2) + copy(Hex, 1, 2)); //==>02 00 A8 C0
 end;
 
-function GetHostStartID(HexIP: string): Cardinal;
-begin
-  Result := StrToInt('$' + copy(HexIP, 1, 2));
-end;
-
 function GetLocalIP: pchar;
 var
-  Value: TWSAData;
-  buffer: array[0..14] of Char;
+  Value             : TWSAData;
+  buffer            : array[0..14] of Char;
 begin
   WSAStartUp($0202, Value);
-  getHostName(buffer, sizeof(buffer)); //用到用户名.PCHAR类
+  getHostName(buffer, sizeof(buffer));  //用到用户名.PCHAR类
   Result := Inet_ntoa(PaPInAddr(GetHostByName(buffer).h_addr_list)[0]^); //用一个PAPINADDR类型转换.成in_addr数组指针
   WSACleanup;
 end;
 
 function GetLocalNetArea(IP: integer): string;
 var
-  Addr: TinAddr;
+  Addr              : TinAddr;
 begin
   Addr.S_addr := IP and inet_addr('255.255.255.0');
   Result := Inet_ntoa(Addr);
@@ -173,12 +153,12 @@ end;
 
 procedure WakeUpPro(const MacAddr: string);
 var
-  WSAData: TWSAData;
-  MSocket: TSocket;
-  SockAddrIn: TSockAddrIn;
-  i: integer;
-  MagicAddr: array[0..5] of Byte;
-  MagicData: array[0..101] of Byte;
+  WSAData           : TWSAData;
+  MSocket           : TSocket;
+  SockAddrIn        : TSockAddrIn;
+  i                 : integer;
+  MagicAddr         : array[0..5] of Byte;
+  MagicData         : array[0..101] of Byte;
 begin
   for i := 0 to 5 do MagicAddr[i] := StrToInt('$' + copy(MacAddr, i * 3 + 1, 2));
   try
@@ -205,8 +185,8 @@ end;
 
 function StringToPhysAddr(PhysAddrString: string): TPhysAddrByteArray;
 var
-  C: string;
-  i, V: integer;
+  C                 : string;
+  i, V              : integer;
 begin
   PhysAddrString := UpperCase(PhysAddrString);
   for i := 0 to 5 do begin
@@ -222,7 +202,7 @@ end;
 
 function GetIpAddrTableWithAlloc: PMIB_IPADDRTABLE;
 var
-  Size: ULONG;
+  Size              : ULONG;
 begin
   Size := 0;
   GetIpAddrTable(nil, Size, True);
@@ -235,8 +215,8 @@ end;
 
 function FirstNetworkAdapter(IpAddrTable: PMIB_IPADDRTABLE): integer;
 var
-  i: integer;
-  IfInfo: MIB_IFROW;
+  i                 : integer;
+  IfInfo            : MIB_IFROW;
 begin
   Result := -1;
   for i := 0 to IpAddrTable^.dwNumEntries - 1 do begin
@@ -254,7 +234,7 @@ end;
 
 procedure SetArpEntry(const InetAddr, EtherAddr: string); {如果MAC为空，它将自动查询}
 var
-  Entry: MIB_IPNETROW;
+  Entry             : MIB_IPNETROW;
 begin
   FillChar(Entry, sizeof(Entry), 0);
   Entry.dwAddr := inet_addr(pchar(InetAddr));
@@ -272,10 +252,10 @@ end;
 
 function GetMacAddr(const InetAddr: DWORD): string;
 var
-  ulMACAddr: array[0..5] of Byte;
-  ulAddrLen: ULONG;
-  ulIPAddr: DWORD;
-  i: integer;
+  ulMACAddr         : array[0..5] of Byte;
+  ulAddrLen         : ULONG;
+  ulIPAddr          : DWORD;
+  i                 : integer;
 begin
   Result := '';
   ulIPAddr := InetAddr;
