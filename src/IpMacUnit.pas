@@ -41,7 +41,7 @@ var
   g_StartIP         : DWORD;
   g_ScanCount       : DWORD;
   g_ThreadCount     : DWORD = 10;       //线程总数
-  g_NrThreadActive  : DWORD;            //线程退出就减一 ,全部退出则完成
+  g_NrThreadActive  : Integer;          //线程退出就减一 ,全部退出则完成
   g_LvCri           : TRTLCriticalSection;
   isChange          : Boolean = false;
   isScanList        : Boolean;
@@ -59,12 +59,13 @@ begin
   StartBtn.Caption := BTN_START;
   dwStopTick := GetTickCount;
   if Title = TITLE_SCAN then begin
-    for i := 0 to g_ScanList.Count - 1 do begin
-      if g_ScanList.LVItems[i, 4] <> STATUS_DOWN then
-        Inc(n);
-      if g_ScanList.LVItems[i, 2] <> '0' then
-        Inc(j);
-    end;
+    if g_ScanList.Count > 0 then
+      for i := 0 to g_ScanList.Count - 1 do begin
+        if g_ScanList.LVItems[i, 4] <> STATUS_DOWN then
+          Inc(n);
+        if g_ScanList.LVItems[i, 2] <> '0' then
+          Inc(j);
+      end;
     Str := '　New: ' + IntToStr(j);
   end;
   W.Caption := Title + '耗时: ' + IntToStr(DiffTickCount(g_StartTick, dwStopTick))
@@ -107,15 +108,17 @@ begin
       else if nIndex > -1 then
         LVItems[nIndex, 4] := STATUS_DOWN;
     end;
+
+    if isScanList then begin
+      if g_NrThreadActive > 1 then
+        Dec(g_NrThreadActive)
+      else begin                        //自己是后最一个收尾线程
+        MakeEnd(TITLE_SCAN, 0);
+      end;
+    end;
+
   finally
     LeaveCriticalSection(g_LvCri);      //退出临界区
-  end;
-  
-  if not isScanList then Exit;
-  if g_NrThreadActive > 1 then
-    Dec(g_NrThreadActive)
-  else begin                            //自己是后最一个收尾线程
-    MakeEnd(TITLE_SCAN, 0);
   end;
 end;
 
@@ -132,10 +135,16 @@ begin
     dwCurrIP := htonl(ntohl(g_StartIP) + i * g_ThreadCount + dwIndex - 1); //转换顺序 并加1
     Result := DoArpScan(dwCurrIP);
   end;
-  if g_NrThreadActive > 1 then
-    Dec(g_NrThreadActive)
-  else begin                            //自己是后最一个收尾线程
-    MakeEnd(TITLE_SCAN, 0);
+
+  EnterCriticalSection(g_LvCri);        //进入临界区
+  try
+    if g_NrThreadActive > 1 then
+      Dec(g_NrThreadActive)
+    else begin                          //自己是后最一个收尾线程
+      MakeEnd(TITLE_SCAN, 0);
+    end;
+  finally
+    LeaveCriticalSection(g_LvCri);      //退出临界区
   end;
 end;
 
@@ -220,7 +229,7 @@ end;
 procedure SaveList(Sender: PObj);
 var
   i                 : Integer;
-  f                 : textfile;
+  slList            : PStrList;
 begin
   WritePrivateProfileString('set', 'startip', PChar(iEdit1.Text), PChar(cfgfile));
   WritePrivateProfileString('set', 'endip', PChar(iEdit2.Text), PChar(cfgfile));
@@ -232,27 +241,32 @@ begin
         + MB_ICONQUESTION) = IDNO then
         Exit;
 
-    if FileExists(ipmacFile) then
-      if Messagebox(W.Handle, 'IpMac列表已存在，是否覆盖？',
-        'HOU提示', MB_YESNO + MB_ICONQUESTION) = IDNO then
-        Exit;
+    slList := NewStrList();
+    slList^.NameDelimiter := #9;
+    try
+      if FileExists(ipmacFile) then begin
+        if Messagebox(W.Handle, 'IpMac列表已存在，[是]覆盖 [否]新增？',
+          'HOU提示', MB_YESNO + MB_ICONQUESTION) = IDNO then
+          slList^.LoadFromFile(ipmacFile);
+      end;
 
-    assignfile(f, ipmacFile);
-    rewrite(f);
-    with g_ScanList^ do
-      for i := 0 to Count - 1 do
-        writeln(f, LVItems[i, 0] + #9 + LVItems[i, 1]);
-    closefile(f);                       //关闭文件
+      with g_ScanList^ do for i := 0 to Count - 1 do
+          slList^.Values[LVItems[i, 0]] := LVItems[i, 1];
+      slList^.SaveToFile(ipmacFile);
+    finally
+      slList^.Free;
+    end;
   end;
   isChange := False;
 end;
 
 procedure LoadList(Sender: PObj);
 var
-  f                 : textfile;
+  i                 : Integer;
   s                 : string;
   szBuf             : array[0..255] of char;
   nIndex            : Integer;
+  slList            : PStrList;
 begin                                   //载入
   if not Assigned(Sender) then
   begin
@@ -264,21 +278,25 @@ begin                                   //载入
     iEdit2.Text := szBuf;
   end else
     if fileexists(ipmacFile) then begin
-      g_StartTick := GetTickCount;
-      assignfile(f, ipmacFile);
-      reset(f);
-      with g_ScanList^ do begin
-        Clear;
-        while not eof(f) do begin
-          readln(f, s);
-          nIndex := LVItemAdd(GetSubStrEx(s, '', #9, s));
-          LVItems[nIndex, 1] := s;
-          LVItems[nIndex, 2] := '0';
-          LVItems[nIndex, 3] := MAC_NO;
-          LVItems[nIndex, 4] := STATUS_NONE;
+      slList := NewStrList();
+      try
+        g_StartTick := GetTickCount;
+        slList^.NameDelimiter := #9;
+        slList^.LoadFromFile(ipmacFile);
+        with g_ScanList^ do begin
+          Clear;
+          for i := 0 to slList^.Count - 1 do
+          begin
+            nIndex := LVItemAdd(GetSubStrEx(slList^.Items[i], '', #9, s));
+            LVItems[nIndex, 1] := s;
+            LVItems[nIndex, 2] := '0';
+            LVItems[nIndex, 3] := MAC_NO;
+            LVItems[nIndex, 4] := STATUS_NONE;
+          end;
+          MakeEnd(TITLE_LOAD, 0);
         end;
-        closefile(f);                   //关闭文件
-        MakeEnd(TITLE_LOAD, 0);
+      finally
+        slList^.Free;
       end;
       isChange := False;
     end;
@@ -287,7 +305,7 @@ end;
 procedure ShowHelp;
 begin
   Messagebox(W.Handle, PChar(StrDec('BBDE5D804CCE3EFD43B40286514DA47582399378A740B57EBB04A058996452B060BA09EFDB19F03788268502E41AAA1EC050D07BDD08F04AB800A75F')
-   + '	利用ARP请求原理及多线程扫描，可扫描所有IP设备!'#13#10#13#10'若该IP段离线机器较多请将线程数增加，以提速．'#13#10#13#10'默认线程设为0,实际工作线程数等于IP数(但不大于1000,且“扫列表”时“设置”都无效).'), '关于', 0);
+    + '	利用ARP请求原理及多线程扫描，可扫描所有IP设备!'#13#10#13#10'若该IP段离线机器较多请将线程数增加，以提速．'#13#10#13#10'默认线程设为0,实际工作线程数等于IP数(但不大于1000,且“扫列表”时“设置”都无效).'), '关于', 0);
 end;
 
 procedure OnListVPopup(Sender: PObj);
@@ -449,7 +467,7 @@ begin
   Applet := newApplet('IP-MAC');
   Applet.ExStyle := 0;
   AppButtonUsed := true;
-  W := newForm(Applet, 'IP-MAC扫描-网络唤醒 v1.2b').SetSize(450, 380);
+  W := newForm(Applet, 'IP-MAC扫描-网络唤醒 v1.2c').SetSize(450, 380);
   with W^ do begin
     Style := WS_OVERLAPPED + WS_CAPTION + WS_SYSMENU + WS_MINIMIZEBOX
       + WS_MAXIMIZEBOX + WS_THICKFRAME;
