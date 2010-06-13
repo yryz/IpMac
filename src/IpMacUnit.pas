@@ -10,6 +10,12 @@ uses
   NetAPIUnit,
   FuncLib;
 
+const
+  HELP_TEXT         = '	利用ARP请求原理及多线程扫描，可扫描所有IP设备!'#13#10#13#10
+    + '1.[扫描线程] 若该IP段离线机器较多请将线程数增加，以提速．'#13#10#13#10
+    + '  默认线程设为0,实际工作线程数等于IP数(但不大于1000,且“扫列表”时“设置”都无效).'#13#10#13#10
+    + '2.[修改备注] 保存扫描列表后，直接用记事本编辑IpMac.txt。格式为 “IP=MAC|备注”';
+
 procedure ApplicationRun;
 implementation
 const
@@ -95,12 +101,13 @@ begin
             LVItems[nIndex, 3] := MAC_YES
           end;
         end
-        else begin
+        else begin                      //添加
           isChange := True;
           nIndex := LVItemAdd(sIP);     //'IP地址'
           LVItems[nIndex, 1] := sMac;   //'网卡MAC码'
           LVItems[nIndex, 2] := IntToStr(GetCurrentThreadId);
           LVItems[nIndex, 3] := MAC_NEW;
+          LVItems[nIndex, 5] := '无';
         end;
         LVItems[nIndex, 4] := STATUS_UP;
         Result := 1;
@@ -242,7 +249,7 @@ begin
         Exit;
 
     slList := NewStrList();
-    slList^.NameDelimiter := #9;
+    slList^.NameDelimiter := '=';
     try
       if FileExists(ipmacFile) then begin
         if Messagebox(W.Handle, 'IpMac列表已存在，[是]覆盖 [否]新增？',
@@ -251,7 +258,7 @@ begin
       end;
 
       with g_ScanList^ do for i := 0 to Count - 1 do
-          slList^.Values[LVItems[i, 0]] := LVItems[i, 1];
+          slList^.Values[LVItems[i, 0]] := LVItems[i, 1] + '|' + LVItems[i, 5];
       slList^.SaveToFile(ipmacFile);
     finally
       slList^.Free;
@@ -281,17 +288,18 @@ begin                                   //载入
       slList := NewStrList();
       try
         g_StartTick := GetTickCount;
-        slList^.NameDelimiter := #9;
+        slList^.NameDelimiter := '=';
         slList^.LoadFromFile(ipmacFile);
         with g_ScanList^ do begin
           Clear;
           for i := 0 to slList^.Count - 1 do
           begin
-            nIndex := LVItemAdd(GetSubStrEx(slList^.Items[i], '', #9, s));
-            LVItems[nIndex, 1] := s;
+            nIndex := LVItemAdd(GetSubStrEx(slList^.Items[i], '', '=', s));
+            LVItems[nIndex, 1] := GetSubStrEx(s, '', '|', s);
             LVItems[nIndex, 2] := '0';
             LVItems[nIndex, 3] := MAC_NO;
             LVItems[nIndex, 4] := STATUS_NONE;
+            LVItems[nIndex, 5] := s;
           end;
           MakeEnd(TITLE_LOAD, 0);
         end;
@@ -305,7 +313,7 @@ end;
 procedure ShowHelp;
 begin
   Messagebox(W.Handle, PChar(StrDec('BBDE5D804CCE3EFD43B40286514DA47582399378A740B57EBB04A058996452B060BA09EFDB19F03788268502E41AAA1EC050D07BDD08F04AB800A75F')
-    + '	利用ARP请求原理及多线程扫描，可扫描所有IP设备!'#13#10#13#10'若该IP段离线机器较多请将线程数增加，以提速．'#13#10#13#10'默认线程设为0,实际工作线程数等于IP数(但不大于1000,且“扫列表”时“设置”都无效).'), '关于', 0);
+    + HELP_TEXT), '关于', 0);
 end;
 
 procedure OnListVPopup(Sender: PObj);
@@ -439,6 +447,8 @@ begin
     LVColAdd('线程', taCenter, 50);
     LVColAdd('变更', taCenter, 45);
     LVColAdd('状态', taCenter, 45);
+    LVColAdd('备注', taCenter, 55);
+    DoubleBuffered := True;
   end;
 end;
 
@@ -467,7 +477,7 @@ begin
   Applet := newApplet('IP-MAC');
   Applet.ExStyle := 0;
   AppButtonUsed := true;
-  W := newForm(Applet, 'IP-MAC扫描-网络唤醒 v1.2c').SetSize(450, 380);
+  W := newForm(Applet, 'IP-MAC扫描-网络唤醒 v1.2d').SetSize(450, 380);
   with W^ do begin
     Style := WS_OVERLAPPED + WS_CAPTION + WS_SYSMENU + WS_MINIMIZEBOX
       + WS_MAXIMIZEBOX + WS_THICKFRAME;
