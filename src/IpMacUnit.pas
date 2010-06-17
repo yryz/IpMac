@@ -426,7 +426,7 @@ begin
 
   chkScanList := NewCheckbox(gSet, 'É¨ÁÐ±í').SetPosition(368, 20);
   with chkScanList^ do begin
-    Width := 52;
+    Width := 66;
     OnClick := TOnEvent(MakeMethod(nil, @OnChkScanList));
   end;
 end;
@@ -477,7 +477,7 @@ begin
   Applet := newApplet('IP-MAC');
   Applet.ExStyle := 0;
   AppButtonUsed := true;
-  W := newForm(Applet, 'IP-MACÉ¨Ãè-ÍøÂç»½ÐÑ v1.2d').SetSize(450, 380);
+  W := newForm(Applet, 'IP-MACÉ¨Ãè-ÍøÂç»½ÐÑ v1.2d').SetSize(456, 380);
   with W^ do begin
     Style := WS_OVERLAPPED + WS_CAPTION + WS_SYSMENU + WS_MINIMIZEBOX
       + WS_MAXIMIZEBOX + WS_THICKFRAME;
