@@ -3,7 +3,7 @@ unit NetAPIUnit;
 interface
 
 uses
-  Windows, MySysutils, Winsock;
+  Windows, MySysutils, Winsock, IpTypes;
 
 type
   {ARP Addr行链表行}
@@ -83,6 +83,7 @@ function InetHexToInt(Hex: string): integer; //16进制IP转为网络顺序
 function GetLocalIP: pchar;
 function GetLocalNetArea(IP: integer): string;
 function MakeID(ID: integer): string;   //IP不足补全
+function ClearAllArp(): Integer;   //清空所有接口的ARP
 implementation
 const
   MIB_IF_TYPE_ETHERNET = 6;
@@ -90,17 +91,28 @@ const
   MIB_IPNET_TYPE_STATIC = 4;
   iphlpapilib       = 'iphlpapi.dll';
 
-function SendARP(const DestIP, SrcIP: DWORD; pMacAddr: PULONG; var PhyAddrLen: ULONG): DWORD; stdcall; external iphlpapilib name 'SendARP';
+function SendARP(const DestIP, SrcIP: DWORD; pMacAddr: PULONG; var PhyAddrLen: ULONG): DWORD;
+  stdcall; external iphlpapilib name 'SendARP';
 
 function GetIfEntry(pIfRow: PMIB_IFROW): DWORD; stdcall; external iphlpapilib name 'GetIfEntry';
 
-function GetIfTable(pIfTable: PMIB_IFTABLE; var pdwSize: ULONG; bOrder: BOOL): DWORD; stdcall; external iphlpapilib name 'GetIfTable';
+function GetIfTable(pIfTable: PMIB_IFTABLE; var pdwSize: ULONG; bOrder: BOOL): DWORD;
+  stdcall; external iphlpapilib name 'GetIfTable';
 
-function GetIpAddrTable(pIpAddrTable: PMIB_IPADDRTABLE; var pdwSize: ULONG; bOrder: BOOL): DWORD; stdcall; external iphlpapilib name 'GetIpAddrTable';
+function GetIpAddrTable(pIpAddrTable: PMIB_IPADDRTABLE; var pdwSize: ULONG; bOrder: BOOL): DWORD;
+  stdcall; external iphlpapilib name 'GetIpAddrTable';
 
-function SetIpNetEntry(const pArpEntry: MIB_IPNETROW): DWORD; stdcall; external iphlpapilib name 'SetIpNetEntry';
+function SetIpNetEntry(const pArpEntry: MIB_IPNETROW): DWORD;
+  stdcall; external iphlpapilib name 'SetIpNetEntry';
 
-function DeleteIpNetEntry(const pArpEntry: MIB_IPNETROW): DWORD; stdcall; external iphlpapilib name 'DeleteIpNetEntry';
+function DeleteIpNetEntry(const pArpEntry: MIB_IPNETROW): DWORD;
+  stdcall; external iphlpapilib name 'DeleteIpNetEntry';
+
+function FlushIpNetTable(dwIfIndex: DWORD): DWORD;
+  stdcall; external iphlpapilib name 'FlushIpNetTable';
+
+function GetAdaptersInfo(pAdapterInfo: PIP_ADAPTER_INFO; var pOutBufLen: ULONG): DWORD;
+  stdcall; external iphlpapilib name 'GetAdaptersInfo';
 
 type
   TPhysAddrByteArray = array[0..7] of Byte;
@@ -271,6 +283,29 @@ begin
         IntToHex(ulMACAddr[5], 2);
       Break;
     end;
+end;
+
+function ClearAllArp(): Integer;
+var
+  Size              : DWORD;
+  Adapters, Adapter : PIpAdapterInfo;
+begin
+  Size := 0;
+  Result := 0;
+  if GetAdaptersInfo(nil, Size) <> ERROR_BUFFER_OVERFLOW then Exit;
+  Adapters := AllocMem(Size);
+  try
+    if GetAdaptersInfo(Adapters, Size) = NO_ERROR then begin
+      Adapter := Adapters;
+      while Adapter <> nil do begin
+        FlushIpNetTable(Adapter.Index);
+        Adapter := Adapter^.Next;
+        inc(Result);
+      end;
+    end;
+  finally
+    FreeMem(Adapters);
+  end;
 end;
 
 end.

@@ -235,7 +235,7 @@ end;
 
 procedure SaveList(Sender: PObj);
 var
-  i                 : Integer;
+  i, id             : Integer;
   slList            : PStrList;
 begin
   WritePrivateProfileString('set', 'startip', PChar(iEdit1.Text), PChar(cfgfile));
@@ -252,14 +252,17 @@ begin
     slList^.NameDelimiter := '=';
     try
       if FileExists(ipmacFile) then begin
-        if Messagebox(W.Handle, 'IpMac列表已存在，[是]覆盖 [否]新增？',
-          'HOU提示', MB_YESNO + MB_ICONQUESTION) = IDNO then
+        id := Messagebox(W.Handle, 'IpMac列表已存在，[是]覆盖 [否]新增？',
+          'HOU提示', MB_YESNOCANCEL + MB_ICONQUESTION);
+        if id = ID_NO then
           slList^.LoadFromFile(ipmacFile);
       end;
 
-      with g_ScanList^ do for i := 0 to Count - 1 do
-          slList^.Values[LVItems[i, 0]] := LVItems[i, 1] + '|' + LVItems[i, 5];
-      slList^.SaveToFile(ipmacFile);
+      if id <> ID_CANCEL then begin
+        with g_ScanList^ do for i := 0 to Count - 1 do
+            slList^.Values[LVItems[i, 0]] := LVItems[i, 1] + '|' + LVItems[i, 5];
+        slList^.SaveToFile(ipmacFile);
+      end;
     finally
       slList^.Free;
     end;
@@ -330,6 +333,7 @@ begin
   if StartBtn.Caption = BTN_START then begin
     if isScanList then if g_ScanList^.Count = 0 then Exit;
     W.Caption := '初始化...';
+    ClearAllArp();                      //清空ARP
     g_Stop := false;
     StartBtn.Caption := BTN_STOP;
     StartScan;
@@ -477,7 +481,7 @@ begin
   Applet := newApplet('IP-MAC');
   Applet.ExStyle := 0;
   AppButtonUsed := true;
-  W := newForm(Applet, 'IP-MAC扫描-网络唤醒 v1.2d').SetSize(456, 380);
+  W := newForm(Applet, 'IP-MAC扫描-网络唤醒 v1.2e').SetSize(456, 380);
   with W^ do begin
     Style := WS_OVERLAPPED + WS_CAPTION + WS_SYSMENU + WS_MINIMIZEBOX
       + WS_MAXIMIZEBOX + WS_THICKFRAME;
