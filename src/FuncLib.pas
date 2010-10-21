@@ -29,7 +29,8 @@ begin
   Result := '';
   j := 0;
   try
-    for i := 1 to Length(Str) div 2 do begin
+    for i := 1 to Length(Str) div 2 do
+    begin
       Result := Result + Char(StrToInt('$' + Copy(Str, i * 2 - 1, 2)) xor XorKey[j]);
       j := (j + 1) mod 8;
     end;
@@ -50,7 +51,8 @@ begin
       Result := '';
       Exit;
     end;
-  end else
+  end
+  else
     Index := 1;
 
   Result := Copy(_Str, Index + Length(_Start), MaxInt);
@@ -76,7 +78,8 @@ begin
       _LastStr := _Str;
       Exit;
     end;
-  end else
+  end
+  else
     Index := 1;
 
   _LastStr := Copy(_Str, Index + Length(_Start), MaxInt);
@@ -96,7 +99,8 @@ function GetTickCountUSec;              //比 GetTickCount精度高25~30毫秒
 var
   lpPerformanceCount: Int64;
 begin
-  if Frequency = 0 then begin
+  if Frequency = 0 then
+  begin
     QueryPerformanceFrequency(Frequency); //WINDOWS API 返回计数频率(Intel86:1193180)(获得系统的高性能频率计数器在一秒内的震动次数)
     Frequency := Frequency div 1000000; //一微秒内振动次数
   end;
@@ -106,8 +110,10 @@ end;
 
 function DiffTickCount;                 //计算活动时间差
 begin
-  if tNew >= tOld then Result := tNew - tOld
-  else Result := DWORD($FFFFFFFF) - tOld + tNew;
+  if tNew >= tOld then
+    Result := tNew - tOld
+  else
+    Result := DWORD($FFFFFFFF) - tOld + tNew;
 end;
 end.
 

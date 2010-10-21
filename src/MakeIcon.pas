@@ -9,14 +9,14 @@ function CreateDigitalIcon(value: integer): HIcon;
 implementation
 
 function CreateDigitalIcon(value: integer): HIcon;
-Const
-  ASize = 16;
+const
+  ASize             = 16;
 var
-  IconInfo: TIconInfo;
-  ARect: TRect;
+  IconInfo          : TIconInfo;
+  ARect             : TRect;
   SCreenDC, DCMask, DCColor: HDC;
-  S: KolString;
-  TextColor : ColorRef;
+  S                 : KolString;
+  TextColor         : ColorRef;
 begin
   S := Int2Str(Value);
   ARect := MakeRect(0, 0, ASize, ASize);
@@ -44,10 +44,10 @@ begin
     patBlt(DCMask, 0, 0, ASize, ASize, WHITENESS);
     DrawText(DCMask, PkolChar(S), -1, ARect, DT_CENTER or DT_VCENTER or DT_SINGLELINE);
 
-    fIcon    := TRUE;
+    fIcon := TRUE;
     xHotspot := 0;
     yHotspot := 0;
-    hbmMask  := SelectObject(DCMask, hbmMask);
+    hbmMask := SelectObject(DCMask, hbmMask);
     hbmColor := SelectObject(DCColor, hbmColor);
     Result := CreateIconIndirect(IconInfo);
 
@@ -55,7 +55,8 @@ begin
     DeleteObject(hbmMask);
     DeleteDC(DCColor);
     DeleteDC(DCMask);
-    S := '';   
+    S := '';
   end;
 end;
 end.
+

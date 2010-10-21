@@ -33,7 +33,6 @@ type
     dwType: DWORD;
   end;
 
-
   {网络接口链表行}
   PMIB_IFROW = ^MIB_IFROW;
   MIB_IFROW = record
@@ -83,7 +82,7 @@ function InetHexToInt(Hex: string): integer; //16进制IP转为网络顺序
 function GetLocalIP: pchar;
 function GetLocalNetArea(IP: integer): string;
 function MakeID(ID: integer): string;   //IP不足补全
-function ClearAllArp(): Integer;   //清空所有接口的ARP
+function ClearAllArp(): Integer;        //清空所有接口的ARP
 implementation
 const
   MIB_IF_TYPE_ETHERNET = 6;
@@ -116,7 +115,6 @@ function GetAdaptersInfo(pAdapterInfo: PIP_ADAPTER_INFO; var pOutBufLen: ULONG):
 
 type
   TPhysAddrByteArray = array[0..7] of Byte;
-
 
 function HexToIp(Hex: string): string;  //00 11 22 33 TO 192.168.0.1
 begin
@@ -172,19 +170,26 @@ var
   MagicAddr         : array[0..5] of Byte;
   MagicData         : array[0..101] of Byte;
 begin
-  for i := 0 to 5 do MagicAddr[i] := StrToInt('$' + copy(MacAddr, i * 3 + 1, 2));
+  for i := 0 to 5 do
+    MagicAddr[i] := StrToInt('$' + copy(MacAddr, i * 3 + 1, 2));
+
   try
     WSAStartUp($0101, WSAData);
     MSocket := Socket(AF_INET, SOCK_DGRAM, IPPROTO_IP); //创建一个UPD数据报SOCKET.
-    if MSocket = INVALID_SOCKET then exit;
+    if MSocket = INVALID_SOCKET then
+      exit;
+
     i := 1;
     setsockopt(MSocket, SOL_SOCKET, SO_BROADCAST, pchar(@i), sizeof(i)); //设置广播
     FillChar(MagicData, sizeof(MagicData), $FF);
+
     i := 6;
-    while i < sizeof(MagicData) do begin
+    while i < sizeof(MagicData) do
+    begin
       Move(MagicAddr, Pointer(Longint(@MagicData) + i)^, 6);
       Inc(i, 6);
     end;
+
     SockAddrIn.SIn_Family := AF_INET;
     SockAddrIn.SIn_Addr.S_addr := Longint(INADDR_BROADCAST);
     sendto(MSocket, MagicData, sizeof(MagicData), 0, SockAddrIn, sizeof(SockAddrIn));
@@ -201,7 +206,8 @@ var
   i, V              : integer;
 begin
   PhysAddrString := UpperCase(PhysAddrString);
-  for i := 0 to 5 do begin
+  for i := 0 to 5 do
+  begin
     C := copy(PhysAddrString, i * 3 + 1, 2);
     V := StrToInt('$' + C);
     Result[i] := V;
@@ -219,7 +225,8 @@ begin
   Size := 0;
   GetIpAddrTable(nil, Size, True);
   Result := AllocMem(Size);
-  if GetIpAddrTable(Result, Size, True) <> NO_ERROR then begin
+  if GetIpAddrTable(Result, Size, True) <> NO_ERROR then
+  begin
     FreeMem(Result);
     Result := nil;
   end;
@@ -231,10 +238,14 @@ var
   IfInfo            : MIB_IFROW;
 begin
   Result := -1;
-  for i := 0 to IpAddrTable^.dwNumEntries - 1 do begin
-{$R-}IfInfo.dwIndex := IpAddrTable^.table[i].dwIndex; {$R+}
-    if GetIfEntry(@IfInfo) = NO_ERROR then begin
-      if IfInfo.dwType in [MIB_IF_TYPE_ETHERNET, MIB_IF_TYPE_TOKENRING] then begin
+  for i := 0 to IpAddrTable^.dwNumEntries - 1 do
+  begin
+{$R-}IfInfo.dwIndex := IpAddrTable^.table[i].dwIndex;
+{$R+}
+    if GetIfEntry(@IfInfo) = NO_ERROR then
+    begin
+      if IfInfo.dwType in [MIB_IF_TYPE_ETHERNET, MIB_IF_TYPE_TOKENRING] then
+      begin
         Result := IfInfo.dwIndex;
         Break;
       end;
@@ -253,7 +264,8 @@ begin
   Entry.dwPhysAddrLen := 6;
   Entry.dwType := MIB_IPNET_TYPE_STATIC;
   Entry.dwIndex := FirstNetworkAdapter(GetIpAddrTableWithAlloc);
-  if EtherAddr = '' then begin
+  if EtherAddr = '' then
+  begin
     DeleteIpNetEntry(Entry);
     SendARP(Entry.dwAddr, 0, @Entry.bPhysAddr, Entry.dwPhysAddrLen); {取得MAC}
   end
@@ -274,7 +286,8 @@ begin
   ulAddrLen := sizeof(ulMACAddr);
   SendARP(ulIPAddr, 0, @ulMACAddr, ulAddrLen);
   for i := 0 to High(ulMACAddr) do
-    if ulMACAddr[i] <> 0 then begin
+    if ulMACAddr[i] <> 0 then
+    begin
       Result := IntToHex(ulMACAddr[0], 2) + '-' +
         IntToHex(ulMACAddr[1], 2) + '-' +
         IntToHex(ulMACAddr[2], 2) + '-' +
@@ -292,12 +305,15 @@ var
 begin
   Size := 0;
   Result := 0;
-  if GetAdaptersInfo(nil, Size) <> ERROR_BUFFER_OVERFLOW then Exit;
+  if GetAdaptersInfo(nil, Size) <> ERROR_BUFFER_OVERFLOW then
+    Exit;
   Adapters := AllocMem(Size);
   try
-    if GetAdaptersInfo(Adapters, Size) = NO_ERROR then begin
+    if GetAdaptersInfo(Adapters, Size) = NO_ERROR then
+    begin
       Adapter := Adapters;
-      while Adapter <> nil do begin
+      while Adapter <> nil do
+      begin
         FlushIpNetTable(Adapter.Index);
         Adapter := Adapter^.Next;
         inc(Result);

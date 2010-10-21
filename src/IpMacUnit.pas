@@ -64,9 +64,11 @@ begin
   g_Stop := true;
   StartBtn.Caption := BTN_START;
   dwStopTick := GetTickCount;
-  if Title = TITLE_SCAN then begin
+  if Title = TITLE_SCAN then
+  begin
     if g_ScanList.Count > 0 then
-      for i := 0 to g_ScanList.Count - 1 do begin
+      for i := 0 to g_ScanList.Count - 1 do
+      begin
         if g_ScanList.LVItems[i, 4] <> STATUS_DOWN then
           Inc(n);
         if g_ScanList.LVItems[i, 2] <> '0' then
@@ -90,18 +92,23 @@ begin
   EnterCriticalSection(g_LvCri);        //进入临界区
   try
     W.Caption := sIP;                   //目前扫描的IP
-    with g_ScanList^ do begin
+    with g_ScanList^ do
+    begin
       nIndex := LVIndexOf(sIP);
-      if sMac <> '' then begin
-        if nIndex > -1 then begin
+      if sMac <> '' then
+      begin
+        if nIndex > -1 then
+        begin
           LVItems[nIndex, 2] := IntToStr(GetCurrentThreadId);
-          if (LVItems[nIndex, 1] <> sMac) then begin
+          if (LVItems[nIndex, 1] <> sMac) then
+          begin
             isChange := True;
             LVItems[nIndex, 1] := sMac; //'网卡MAC码'
             LVItems[nIndex, 3] := MAC_YES
           end;
         end
-        else begin                      //添加
+        else
+        begin                           //添加
           isChange := True;
           nIndex := LVItemAdd(sIP);     //'IP地址'
           LVItems[nIndex, 1] := sMac;   //'网卡MAC码'
@@ -116,10 +123,12 @@ begin
         LVItems[nIndex, 4] := STATUS_DOWN;
     end;
 
-    if isScanList then begin
+    if isScanList then
+    begin
       if g_NrThreadActive > 1 then
         Dec(g_NrThreadActive)
-      else begin                        //自己是后最一个收尾线程
+      else
+      begin                             //自己是后最一个收尾线程
         MakeEnd(TITLE_SCAN, 0);
       end;
     end;
@@ -137,8 +146,11 @@ begin
   dwNum := g_ScanCount div g_ThreadCount; //统一分任务
   if (g_ScanCount mod g_ThreadCount) >= dwIndex then //分剩下的任务
     Inc(dwNum);
-  for i := 0 to dwNum - 1 do begin
-    if g_Stop then Break;
+  for i := 0 to dwNum - 1 do
+  begin
+    if g_Stop then
+      Break;
+
     dwCurrIP := htonl(ntohl(g_StartIP) + i * g_ThreadCount + dwIndex - 1); //转换顺序 并加1
     Result := DoArpScan(dwCurrIP);
   end;
@@ -147,7 +159,8 @@ begin
   try
     if g_NrThreadActive > 1 then
       Dec(g_NrThreadActive)
-    else begin                          //自己是后最一个收尾线程
+    else
+    begin                               //自己是后最一个收尾线程
       MakeEnd(TITLE_SCAN, 0);
     end;
   finally
@@ -160,9 +173,11 @@ var
   i, dwIP1, dwIP0   : DWORD;
   hexIP             : string;
 begin
-  if not isScanList then begin
+  if not isScanList then
+  begin
     if (inet_addr(PChar(trim(iEdit1.Text))) <> INADDR_NONE) and
-      (inet_addr(PChar(trim(iEdit1.Text))) <> INADDR_NONE) then begin
+      (inet_addr(PChar(trim(iEdit1.Text))) <> INADDR_NONE) then
+    begin
       hexIP := IntToHex(inet_addr(PChar(trim(iEdit1.Text))), 8); //01 00 A8 C0
       dwIP0 := InetHexToInt(hexIP);     {转换成为一个长整形数}
       iEdit1.Text := HexToIp(hexIP);    {允许输入 一个数值表示IP}
@@ -171,20 +186,24 @@ begin
       dwIP1 := InetHexToInt(hexIP);
       iEdit2.Text := HexToIp(hexIP);
 
-      if dwIP1 > dwIP0 then begin
+      if dwIP1 > dwIP0 then
+      begin
         g_ScanCount := dwIP1 - dwIP0 + 1;
         g_StartIP := inet_addr(PChar(trim(iEdit1.Text)));
         Label1.Caption := '++>';
         hexIP := IntToHex(inet_addr(PChar(iEdit1.Text)), 8); //01 00 A8 C0
       end
-      else begin
+      else
+      begin
         g_ScanCount := dwIP0 - dwIP1 + 1;
         g_StartIP := inet_addr(PChar(trim(iEdit2.Text)));
         Label1.Caption := '<++';
       end;
-    end else
+    end
+    else
       Exit;
-  end else
+  end
+  else
   begin
     g_ScanCount := g_ScanList.Count;
   end;
@@ -193,13 +212,16 @@ begin
 
   if (g_ScanCount < g_ThreadCount) or (g_ThreadCount = 0) then
     g_ThreadCount := g_ScanCount;
-  if g_ThreadCount > 1000 then g_ThreadCount := 800;
+  if g_ThreadCount > 1000 then
+    g_ThreadCount := 800;
   g_NrThreadActive := g_ThreadCount;
   g_StartTick := GetTickCount;
-  if not isScanList then begin
+  if not isScanList then
+  begin
     for i := 1 to g_ThreadCount do
       CloseHandle(BeginThread(nil, 0, @ARPScanThread, Pointer(i), 0, ThID));
-  end else
+  end
+  else
   begin
     for i := 0 to g_ScanCount - 1 do
       CloseHandle(BeginThread(nil, 0, @DoArpScan,
@@ -216,10 +238,13 @@ begin
   StartBtn.Caption := BTN_STOP;
   g_StartTick := GetTickCount;
   with g_ScanList^ do
-    if LVSelCount > 0 then begin
+    if LVSelCount > 0 then
+    begin
       i := LVCurItem;
-      while i > -1 do begin
-        if g_Stop then exit;
+      while i > -1 do
+      begin
+        if g_Stop then
+          exit;
         W.Caption := LVItems[i, 0];
         WakeUpPro(LVItems[i, 1]);
         Inc(n);
@@ -251,15 +276,18 @@ begin
     slList := NewStrList();
     slList^.NameDelimiter := '=';
     try
-      if FileExists(ipmacFile) then begin
+      if FileExists(ipmacFile) then
+      begin
         id := Messagebox(W.Handle, 'IpMac列表已存在，[是]覆盖 [否]新增？',
           'HOU提示', MB_YESNOCANCEL + MB_ICONQUESTION);
         if id = ID_NO then
           slList^.LoadFromFile(ipmacFile);
       end;
 
-      if id <> ID_CANCEL then begin
-        with g_ScanList^ do for i := 0 to Count - 1 do
+      if id <> ID_CANCEL then
+      begin
+        with g_ScanList^ do
+          for i := 0 to Count - 1 do
             slList^.Values[LVItems[i, 0]] := LVItems[i, 1] + '|' + LVItems[i, 5];
         slList^.SaveToFile(ipmacFile);
       end;
@@ -286,31 +314,33 @@ begin                                   //载入
     GetPrivateProfileString('set', 'endip', '192.168.0.254', szBuf,
       SizeOf(szBuf), PChar(cfgfile));
     iEdit2.Text := szBuf;
-  end else
-    if fileexists(ipmacFile) then begin
-      slList := NewStrList();
-      try
-        g_StartTick := GetTickCount;
-        slList^.NameDelimiter := '=';
-        slList^.LoadFromFile(ipmacFile);
-        with g_ScanList^ do begin
-          Clear;
-          for i := 0 to slList^.Count - 1 do
-          begin
-            nIndex := LVItemAdd(GetSubStrEx(slList^.Items[i], '', '=', s));
-            LVItems[nIndex, 1] := GetSubStrEx(s, '', '|', s);
-            LVItems[nIndex, 2] := '0';
-            LVItems[nIndex, 3] := MAC_NO;
-            LVItems[nIndex, 4] := STATUS_NONE;
-            LVItems[nIndex, 5] := s;
-          end;
-          MakeEnd(TITLE_LOAD, 0);
+  end
+  else if fileexists(ipmacFile) then
+  begin
+    slList := NewStrList();
+    try
+      g_StartTick := GetTickCount;
+      slList^.NameDelimiter := '=';
+      slList^.LoadFromFile(ipmacFile);
+      with g_ScanList^ do
+      begin
+        Clear;
+        for i := 0 to slList^.Count - 1 do
+        begin
+          nIndex := LVItemAdd(GetSubStrEx(slList^.Items[i], '', '=', s));
+          LVItems[nIndex, 1] := GetSubStrEx(s, '', '|', s);
+          LVItems[nIndex, 2] := '0';
+          LVItems[nIndex, 3] := MAC_NO;
+          LVItems[nIndex, 4] := STATUS_NONE;
+          LVItems[nIndex, 5] := s;
         end;
-      finally
-        slList^.Free;
+        MakeEnd(TITLE_LOAD, 0);
       end;
-      isChange := False;
+    finally
+      slList^.Free;
     end;
+    isChange := False;
+  end;
 end;
 
 procedure ShowHelp;
@@ -330,14 +360,18 @@ end;
 
 procedure OnStartBtn(Sender: PObj);
 begin
-  if StartBtn.Caption = BTN_START then begin
-    if isScanList then if g_ScanList^.Count = 0 then Exit;
+  if StartBtn.Caption = BTN_START then
+  begin
+    if isScanList then
+      if g_ScanList^.Count = 0 then
+        Exit;
     W.Caption := '初始化...';
     ClearAllArp();                      //清空ARP
     g_Stop := false;
     StartBtn.Caption := BTN_STOP;
     StartScan;
-  end else
+  end
+  else
     g_Stop := true;
 end;
 
@@ -355,7 +389,8 @@ function OnFormMessage(dummy: Pointer; var Msg: TMsg; var Rslt: Integer): boolea
 begin
   result := false;
   case Msg.Message of
-    WM_CLOSE: begin
+    WM_CLOSE:
+      begin
         g_Stop := true;
         SaveList(nil);
       end;
@@ -389,27 +424,31 @@ begin
   gSet.Align := caTop;
 
   Label1 := NewLabel(gSet, '++>').SetPosition(105, 22);
-  with Label1^ do begin
+  with Label1^ do
+  begin
     Width := 20;
     Font.Color := clBlue;
   end;
 
   iEdit1 := NewEditBox(gSet, []).SetPosition(8, 20);
-  with iEdit1^ do begin
+  with iEdit1^ do
+  begin
     Width := 95;
     Color := clWhite;
     //Text := '192.168.0.1';
   end;
 
   iEdit2 := NewEditBox(gSet, []).SetPosition(125, 20);
-  with iEdit2^ do begin
+  with iEdit2^ do
+  begin
     Width := 95;
     Color := clWhite;
     //Text := '192.168.0.254';
   end;
 
   iEdit3 := NewEditBox(gSet, []).SetPosition(223, 20);
-  with iEdit3^ do begin
+  with iEdit3^ do
+  begin
     Width := 30;
     TextAlign := taCenter;
     Color := clWhite;
@@ -417,19 +456,22 @@ begin
   end;
 
   StartBtn := NewButton(gSet, BTN_START).SetPosition(258, 20);
-  with StartBtn^ do begin
+  with StartBtn^ do
+  begin
     Width := 50;
     OnClick := TOnEvent(MakeMethod(nil, @OnStartBtn));
   end;
 
   ClearBtn := NewButton(gSet, '清空(&C)').SetPosition(312, 20);
-  with ClearBtn^ do begin
+  with ClearBtn^ do
+  begin
     Width := 50;
     OnClick := TOnEvent(MakeMethod(nil, @OnClearBtn));
   end;
 
   chkScanList := NewCheckbox(gSet, '扫列表').SetPosition(368, 20);
-  with chkScanList^ do begin
+  with chkScanList^ do
+  begin
     Width := 66;
     OnClick := TOnEvent(MakeMethod(nil, @OnChkScanList));
   end;
@@ -443,7 +485,8 @@ begin
 
   g_ScanList := NewListView(gScanList, lvsDetail, [lvoGridLines,
     lvoRowSelect, lvoMultiselect, lvoHeaderDragDrop, lvoSortAscending], nil, nil, nil);
-  with g_ScanList^ do begin
+  with g_ScanList^ do
+  begin
     OnClick := TOnEvent(MakeMethod(nil, @OnListVPopup));
     Align := caClient;
     LVColAdd('IP地址', taLeft, 95);
@@ -461,7 +504,8 @@ begin
   ScanSetControl;
   ScanListControl;
   PopupMenu := newMenu(g_ScanList, 100, [], TOnMenuItem(MakeMethod(nil, @OnPopupMenu)));
-  with PopupMenu^ do begin
+  with PopupMenu^ do
+  begin
     Insert(-1, '关于', nil, []);
     Insert(-1, '-', nil, [moSeparator]);
     Insert(-1, '唤醒', nil, []);
@@ -482,7 +526,8 @@ begin
   Applet.ExStyle := 0;
   AppButtonUsed := true;
   W := newForm(Applet, 'IP-MAC扫描-网络唤醒 v1.2e').SetSize(456, 380);
-  with W^ do begin
+  with W^ do
+  begin
     Style := WS_OVERLAPPED + WS_CAPTION + WS_SYSMENU + WS_MINIMIZEBOX
       + WS_MAXIMIZEBOX + WS_THICKFRAME;
     CenterOnParent;
