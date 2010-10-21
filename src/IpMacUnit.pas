@@ -21,7 +21,7 @@ implementation
 const
   BTN_START         = '开始(&S)';
   BTN_STOP          = '停止(&S)';
-  STATUS_NONE       = '？';
+  STATUS_NONE       = '?';
   STATUS_DOWN       = '×';
   STATUS_UP         = '√';
   MAC_YES           = 'Yes';
@@ -423,7 +423,7 @@ begin
   gSet := NewGroupBox(W, 'IP范围 ／ 扫描线程　OR　唤醒延时').SetSize(100, 50);
   gSet.Align := caTop;
 
-  Label1 := NewLabel(gSet, '++>').SetPosition(105, 22);
+  Label1 := NewLabel(gSet, '++>').SetPosition(105, 25);
   with Label1^ do
   begin
     Width := 20;
@@ -458,18 +458,18 @@ begin
   StartBtn := NewButton(gSet, BTN_START).SetPosition(258, 20);
   with StartBtn^ do
   begin
-    Width := 50;
+    Width := 55;
     OnClick := TOnEvent(MakeMethod(nil, @OnStartBtn));
   end;
 
-  ClearBtn := NewButton(gSet, '清空(&C)').SetPosition(312, 20);
+  ClearBtn := NewButton(gSet, '清空(&C)').SetPosition(318, 20);
   with ClearBtn^ do
   begin
-    Width := 50;
+    Width := 55;
     OnClick := TOnEvent(MakeMethod(nil, @OnClearBtn));
   end;
 
-  chkScanList := NewCheckbox(gSet, '扫列表').SetPosition(368, 20);
+  chkScanList := NewCheckbox(gSet, '扫列表').SetPosition(380, 20);
   with chkScanList^ do
   begin
     Width := 66;
@@ -489,12 +489,12 @@ begin
   begin
     OnClick := TOnEvent(MakeMethod(nil, @OnListVPopup));
     Align := caClient;
-    LVColAdd('IP地址', taLeft, 95);
-    LVColAdd('MAC地址', taLeft, 115);
+    LVColAdd('IP地址', taLeft, 105);
+    LVColAdd('MAC地址', taLeft, 120);
     LVColAdd('线程', taCenter, 50);
     LVColAdd('变更', taCenter, 45);
     LVColAdd('状态', taCenter, 45);
-    LVColAdd('备注', taCenter, 55);
+    LVColAdd('备注', taCenter, 66);
     DoubleBuffered := True;
   end;
 end;
@@ -525,7 +525,7 @@ begin
   Applet := newApplet('IP-MAC');
   Applet.ExStyle := 0;
   AppButtonUsed := true;
-  W := newForm(Applet, 'IP-MAC扫描-网络唤醒 v1.2e').SetSize(456, 380);
+  W := newForm(Applet, 'IP-MAC扫描-网络唤醒 v1.2e').SetSize(480, 380);
   with W^ do
   begin
     Style := WS_OVERLAPPED + WS_CAPTION + WS_SYSMENU + WS_MINIMIZEBOX
@@ -533,6 +533,7 @@ begin
     CenterOnParent;
     OnMessage := TOnMessage(MakeMethod(nil, @OnFormMessage));
     Font.FontHeight := -12;
+    Font.FontName:= '宋体';
   end;
   CreateControls;
 
